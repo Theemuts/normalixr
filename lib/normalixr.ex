@@ -198,18 +198,14 @@ defmodule Normalixr do
   end
 
   defp module_to_name(module) do
-    try do
-      module.name
-    rescue
-      _ ->
-        [name] = ~r/[A-Za-z]+$/
-        |> Regex.run(Atom.to_string(module))
+    pascal_case = module
+    |> Module.split
+    |> List.last
 
-        ~r/(?<!^)[A-Z](?=[a-z])/
-        |> Regex.replace(name, "_\\0")
-        |> String.downcase
-        |> String.to_atom
-    end
+    ~r/(?<!^)[A-Z](?=[a-z])/
+    |> Regex.replace(pascal_case, "_\\0")
+    |> String.downcase
+    |> String.to_atom
   end
 
   defp handle_many(mod, normalized_model, field, data, name, result) do
