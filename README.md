@@ -1,6 +1,6 @@
-A small project that allows you to normalize Ecto models/schemas. Currently,
-two versions are available on Hex. Version 0.1.0 supports Ecto 1,
-version 0.2.0 supports Ecto 2.
+A small project that allows you to normalize Ecto schemas. Currently,
+two versions are available on Hex. Version 0.1.0 supports Ecto 1.1,
+version 0.2.0 supports the Ecto 2 beta.
 
 ## Installation
 
@@ -26,4 +26,5 @@ The package can be installed as:
 
 ## Documentation
 
-All documentation can be found on Hexdocs.
+All documentation can be found on [Hexdocs](https://hexdocs.pm/normalixr/0.2.0).
+
