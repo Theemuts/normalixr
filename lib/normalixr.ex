@@ -1,6 +1,6 @@
 defmodule Normalixr do
   @moduledoc """
-  This module offers basic support to normalize nested Ecto models, merging
+  This module offers basic support to normalize nested Ecto schemas, merging
   normalized results, and backfilling has_on and belongs_to relations.
   """
 
@@ -14,7 +14,7 @@ defmodule Normalixr do
 
   ## Parameters
 
-    - model_or_models: An ecto schema or a list of ecto schemas
+    - schema_or_schemas: An ecto schema or a list of ecto schemas
     - initial_result: The result of an earlier normalization. Defaults to an
     empty map.
 
@@ -23,24 +23,24 @@ defmodule Normalixr do
   the result of an earlier call to this function, because it will be used as
   initial value of the normalized representation that is returned.
 
-  The keys of the map are determined by the modules that define the models.
+  The keys of the map are determined by the modules that define the schemas.
   All but the last dot-separated block is ignored, this last block is
   converted to a lower-case atom with underscores.
 
-  For example, if your module is called MyApp.Models.CityName, the key
-  corresponding to these models in the normalized representation is :city_name.
+  For example, if your module is called MyApp.Schemas.CityName, the key
+  corresponding to these schemas in the normalized representation is :city_name.
 
   The keys each point to a map which contains only the data of that type.
   The key of a schema is its primary key.
 
   ## Example
-      iex> Normalixr.normalize(%MyApp.Models.CityName{id: 1})
-      %{city_name: %{1 => %MyApp.Models.CityName{id: 1}}}
+      iex> Normalixr.normalize(%MyApp.Schemas.CityName{id: 1})
+      %{city_name: %{1 => %MyApp.Schemas.CityName{id: 1}}}
 
   The results no longer contain any nested schemas. Every loaded
   association is replaced by a map with two keys, :field and :ids.
-  The former has the key for those models, the latter contains a list of ids
-  referenced by the model.
+  The former has the key for those schemas, the latter contains a list of ids
+  referenced by the schema.
 
   ## Example
         iex> Normalixr.normalize(%City{id: 4, city_name: %CityName{id: 1}})
@@ -51,29 +51,27 @@ defmodule Normalixr do
 
   If a schema is inserted into the normalized representation which has
   already been set, a Normalixr.FieldMismatchError is raised if the field
-  is set in both models and they don't match. If either value is nil,
+  is set in both schemas and they don't match. If either value is nil,
   it is replaced if the other value is not nil.
   """
 
-  #TODO support default values
-  #TODO test backfilling BelongsTo and HasOne relations
   @spec normalize(Ecto.Schema.t | [Ecto.Schema.t], map) :: map
-  def normalize(model_or_models, result \\ %{})
+  def normalize(schema_or_schemas, result \\ %{})
 
-  def normalize(models, result) when is_list models and is_map result do
-    Enum.reduce(models, result, &(normalize/2))
+  def normalize(schemas, result) when is_list schemas and is_map result do
+    Enum.reduce(schemas, result, &(normalize/2))
   end
 
-  def normalize(model, result) when is_map model and is_map result do
-    mod = model.__struct__
+  def normalize(schema, result) when is_map schema and is_map result do
+    mod = schema.__struct__
 
-    {normalized_model, new_result} = mod.__schema__(:associations) # List of assocs
-    |> Enum.map(&(parse_assoc(&1, model)))                         # Parse each assoc
-    |> Enum.reduce({model, result}, &normalize_assoc/2)            # Normalize each assoc
+    {normalized_schema, new_result} = mod.__schema__(:associations) # List of assocs
+    |> Enum.map(&(parse_assoc(&1, schema)))                         # Parse each assoc
+    |> Enum.reduce({schema, result}, &normalize_assoc/2)            # Normalize each assoc
 
-    # Put the normalized model into the new results
+    # Put the normalized schema into the new results
     [pkey] = mod.__schema__(:primary_key)
-    new_result = update_result({module_to_name(mod), %{Map.fetch!(normalized_model, pkey) => normalized_model}}, new_result)
+    new_result = update_result({module_to_name(mod), %{Map.fetch!(normalized_schema, pkey) => normalized_schema}}, new_result)
 
     # Merge the old and new results
     merge(new_result, result)
@@ -106,16 +104,16 @@ defmodule Normalixr do
 
   ## Parameters
       - result: a normalized representation.
-      - opts: a keyword list, the keys should be the name of the models you
+      - opts: a keyword list, the keys should be the name of the schemas you
       want to backfill, the values the list of associations that should be
-      backfilled for those models.
+      backfilled for those schemas.
 
   ## Example
-        iex> [%MyApp.Models.City{id: 1}, %MyApp.Models.Mayor{id: 2, city_id: 1}]
+        iex> [%MyApp.Schemas.City{id: 1}, %MyApp.Schemas.Mayor{id: 2, city_id: 1}]
         ...> |> Normalixr.normalize
         ...> |> Normalixr.backfill(city: [:mayor], mayor: [:city])
-        %{city: %{1 => %MyApp.Models.City{id: 1, mayor: %{field: :mayor, ids: [2]}}},
-          mayor: %{2 => %MyApp.Models.Mayor{id: 2, city_id: 1, city: %{field: :city, ids: [1]}}}}
+        %{city: %{1 => %MyApp.Schemas.City{id: 1, mayor: %{field: :mayor, ids: [2]}}},
+          mayor: %{2 => %MyApp.Schemas.Mayor{id: 2, city_id: 1, city: %{field: :city, ids: [1]}}}}
 
   As you can see, both the originally unloaded one-to-one relations have been backfilled.
   """
@@ -127,74 +125,74 @@ defmodule Normalixr do
     Enum.reduce(opts, result, &(handle_field/2))
   end
 
-  defp parse_assoc(assoc, model) when is_atom assoc do
-    model.__struct__.__schema__(:association, assoc)
-    |> parse_assoc(model)
+  defp parse_assoc(assoc, schema) when is_atom assoc do
+    schema.__struct__.__schema__(:association, assoc)
+    |> parse_assoc(schema)
   end
 
-  defp parse_assoc(%BelongsTo{field: f, queryable: q, owner_key: o}, model) do
+  defp parse_assoc(%BelongsTo{field: f, queryable: q, owner_key: o}, schema) do
     %{field: f,
-      data: Map.fetch!(model, f),
+      data: Map.fetch!(schema, f),
       mod: q,
       owner_key: o}
   end
 
-  defp parse_assoc(%Has{cardinality: :one, field: f, queryable: q, related_key: r}, model) do
+  defp parse_assoc(%Has{cardinality: :one, field: f, queryable: q, related_key: r}, schema) do
     %{field: f,
-      data: Map.fetch!(model, f),
+      data: Map.fetch!(schema, f),
       mod: q,
       related_key: r}
   end
 
-  defp parse_assoc(%{field: f, queryable: q}, model) do
+  defp parse_assoc(%{field: f, queryable: q}, schema) do
     %{field: f,
-      data: Map.fetch!(model, f),
+      data: Map.fetch!(schema, f),
       mod: q}
   end
 
-  defp parse_assoc(%{field: f, through: t}, model) do
+  defp parse_assoc(%{field: f, through: t}, schema) do
     %{field: f,
-      data: Map.fetch!(model, f),
-      mod: extract_module(t, model)}
+      data: Map.fetch!(schema, f),
+      mod: extract_module(t, schema)}
   end
 
-  defp extract_module(through, model, mod \\ nil) do
+  defp extract_module(through, schema, mod \\ nil) do
     Enum.reduce(through, mod, fn
       (thr, nil) ->
-        case model.__struct__.__schema__(:association, thr) do
+        case schema.__struct__.__schema__(:association, thr) do
           %{queryable: queryable} -> queryable
-          %{through: through} -> extract_module(through, model, mod)
+          %{through: through} -> extract_module(through, schema, mod)
         end
       (thr, mod) ->
         case mod.__schema__(:association, thr) do
           %{queryable: queryable} -> queryable
-          %{through: through} -> extract_module(through, model, mod)
+          %{through: through} -> extract_module(through, schema, mod)
         end
     end)
   end
 
   defp normalize_assoc(%{data: %NotLoaded{}}, acc), do: acc # Ignore NotLoaded field
 
-  defp normalize_assoc(%{data: [] = data, field: field, mod: mod}, {normalized_model, result}) do
+  defp normalize_assoc(%{data: [] = data, field: field, mod: mod}, {normalized_schema, result}) do
     # Data has been loaded, but there are no results.
-    {%{normalized_model | field => %{field: module_to_name(mod), ids: []}}, normalize(data, result)}
+    {%{normalized_schema | field => %{field: module_to_name(mod), ids: []}}, normalize(data, result)}
   end
 
-  defp normalize_assoc(%{data: nil, field: field, mod: mod}, {normalized_model, result}) do
+  defp normalize_assoc(%{data: nil, field: field, mod: mod}, {normalized_schema, result}) do
     # Data has been loaded, but there is no result
-    {%{normalized_model | field => %{field: module_to_name(mod), ids: []}}, result}
+    {%{normalized_schema | field => %{field: module_to_name(mod), ids: []}}, result}
   end
 
-  defp normalize_assoc(%{data: data, field: field, mod: mod}, {normalized_model, result}) when is_list data do
+  defp normalize_assoc(%{data: data, field: field, mod: mod}, {normalized_schema, result}) when is_list data do
     # Data has been loaded, there are many results
     name = module_to_name(mod)
-    handle_many(mod, normalized_model, field, data, name, result)
+    handle_many(mod, normalized_schema, field, data, name, result)
   end
 
-  defp normalize_assoc(%{data: data, field: field, mod: mod}, {normalized_model, result}) when is_map data do
+  defp normalize_assoc(%{data: data, field: field, mod: mod}, {normalized_schema, result}) when is_map data do
     # A single piece of data has been loaded
     [pkey] = mod.__schema__(:primary_key)
-    {%{normalized_model | field => %{field: module_to_name(mod), ids: [Map.fetch!(data, pkey)]}}, normalize(data, result)}
+    {%{normalized_schema | field => %{field: module_to_name(mod), ids: [Map.fetch!(data, pkey)]}}, normalize(data, result)}
   end
 
   defp module_to_name(module) do
@@ -208,10 +206,10 @@ defmodule Normalixr do
     |> String.to_atom
   end
 
-  defp handle_many(mod, normalized_model, field, data, name, result) do
+  defp handle_many(mod, normalized_schema, field, data, name, result) do
     [pkey] = mod.__schema__(:primary_key)
     ids = Enum.map(data, &(Map.fetch!(&1, pkey)))
-    {%{normalized_model | field => %{field: name, ids: ids}}, normalize(data, result)}
+    {%{normalized_schema | field => %{field: name, ids: ids}}, normalize(data, result)}
   end
 
   defp update_result({name, data}, result) do
@@ -224,57 +222,57 @@ defmodule Normalixr do
   end
 
   defp deep_merge(old_data, new_data) do
-    Enum.reduce(new_data, old_data, fn({id, model}, updated_data) ->
+    Enum.reduce(new_data, old_data, fn({id, schema}, updated_data) ->
       case updated_data[id] do
-        nil -> Map.put(updated_data, id, model) # New model
-        ^model -> updated_data                  # Unchanged model
-        current_model ->                        # Model has changed
-          model = do_deep_merge(current_model, model)
-          Map.put(updated_data, id, model)
+        nil -> Map.put(updated_data, id, schema) # New schema
+        ^schema -> updated_data                  # Unchanged schema
+        current_schema ->                        # Schema has changed
+          schema = do_deep_merge(current_schema, schema)
+          Map.put(updated_data, id, schema)
       end
     end)
   end
 
-  defp do_deep_merge(old_model, model) do
-    merge_assocs(old_model, model)
-    |> merge_fields(model)
+  defp do_deep_merge(old_schema, schema) do
+    merge_assocs(old_schema, schema)
+    |> merge_fields(schema)
   end
 
-  defp merge_assocs(old_model, model) do
-    model.__struct__.__schema__(:associations)
-    |> Enum.reduce(old_model, fn(assoc_field, updated_model) ->
-      updated_model_assoc = Map.fetch!(updated_model, assoc_field)
-      new_model_assoc = Map.fetch!(model, assoc_field)
+  defp merge_assocs(old_schema, schema) do
+    schema.__struct__.__schema__(:associations)
+    |> Enum.reduce(old_schema, fn(assoc_field, updated_schema) ->
+      updated_schema_assoc = Map.fetch!(updated_schema, assoc_field)
+      new_schema_assoc = Map.fetch!(schema, assoc_field)
 
-      case updated_model_assoc do
-        ^new_model_assoc -> updated_model
-        %NotLoaded{} -> Map.put(updated_model, assoc_field, new_model_assoc)
+      case updated_schema_assoc do
+        ^new_schema_assoc -> updated_schema
+        %NotLoaded{} -> Map.put(updated_schema, assoc_field, new_schema_assoc)
         %{ids: ids} ->
-          case new_model_assoc do
-            %NotLoaded{} -> updated_model
+          case new_schema_assoc do
+            %NotLoaded{} -> updated_schema
             %{ids: new_ids} = assoc_v ->
               assoc_v = %{assoc_v | ids: Enum.uniq(ids ++ new_ids)}
-              Map.put(updated_model, assoc_field, assoc_v)
+              Map.put(updated_schema, assoc_field, assoc_v)
           end
       end
     end)
   end
 
-  defp merge_fields(old_model, model) do
-    model.__struct__.__schema__(:fields)
-    |> Enum.reduce(old_model, fn(field, updated_model) ->
-         updated_model_field = Map.fetch!(updated_model, field)
-         new_model_field = Map.fetch!(model, field)
+  defp merge_fields(old_schema, schema) do
+    schema.__struct__.__schema__(:fields)
+    |> Enum.reduce(old_schema, fn(field, updated_schema) ->
+         updated_schema_field = Map.fetch!(updated_schema, field)
+         new_schema_field = Map.fetch!(schema, field)
 
-         case updated_model_field do
-           ^new_model_field -> updated_model
-           nil -> Map.put(updated_model, field, new_model_field)
-           _ when is_nil new_model_field -> updated_model
+         case updated_schema_field do
+           ^new_schema_field -> updated_schema
+           nil -> Map.put(updated_schema, field, new_schema_field)
+           _ when is_nil new_schema_field -> updated_schema
            _ ->
              message = "The field #{inspect field} in the normalized data" <>
                        " doesn't match the new value. Current" <>
-                       " value: #{inspect updated_model_field}, new" <>
-                       " value: #{inspect new_model_field}"
+                       " value: #{inspect updated_schema_field}, new" <>
+                       " value: #{inspect new_schema_field}"
 
              raise Normalixr.FieldMismatchError, message: message
          end
@@ -290,21 +288,21 @@ defmodule Normalixr do
     case result[name] do
       nil ->
         {name, []}
-      model_list ->
-        x = model_list
-        |> Enum.map(&(handle_model(&1, assoc, result)))
+      schema_list ->
+        x = schema_list
+        |> Enum.map(&(handle_schema(&1, assoc, result)))
         |> Enum.into(%{})
         {name, x}
     end
   end
 
-  defp handle_model({_, model} = m, assoc, updated_result) do
-    case Map.fetch(model, assoc) do
+  defp handle_schema({_, schema} = m, assoc, updated_result) do
+    case Map.fetch(schema, assoc) do
       {:ok, %NotLoaded{}} ->
-        parse_assoc(assoc, model)
+        parse_assoc(assoc, schema)
         |> maybe_backfill_not_loaded(updated_result, m, assoc)
       {:ok, _} -> m
-      _ -> raise Normalixr.NonexistentAssociation, "Association #{inspect assoc} does not exist in the schema #{inspect model.__struct__}."
+      _ -> raise Normalixr.NonexistentAssociation, "Association #{inspect assoc} does not exist in the schema #{inspect schema.__struct__}."
     end
   end
 
@@ -317,49 +315,49 @@ defmodule Normalixr do
     maybe_backfill_not_loaded(mod, r, updated_result, m, assoc)
   end
 
-  defp maybe_backfill_not_loaded(mod, model_field, updated_result, {_, _} = m, assoc) do
+  defp maybe_backfill_not_loaded(mod, schema_field, updated_result, {_, _} = m, assoc) do
     related_name = module_to_name(mod)
-    maybe_do_backfill_not_loaded(model_field, related_name, updated_result[related_name], m, assoc)
+    maybe_do_backfill_not_loaded(schema_field, related_name, updated_result[related_name], m, assoc)
   end
 
   defp maybe_do_backfill_not_loaded(_, _, nil, m, _), do: m
 
-  defp maybe_do_backfill_not_loaded(model_field, related_name, map_of_models, {_, model} = m, assoc) when is_map(map_of_models) do
-    case Map.get(model, model_field) do
-      nil -> maybe_handle_has_one(model_field, related_name, map_of_models, m, assoc)
-      related_model_id -> do_backfill_model(map_of_models[related_model_id], related_name, m, assoc)
+  defp maybe_do_backfill_not_loaded(schema_field, related_name, map_of_schemas, {_, schema} = m, assoc) when is_map(map_of_schemas) do
+    case Map.get(schema, schema_field) do
+      nil -> maybe_handle_has_one(schema_field, related_name, map_of_schemas, m, assoc)
+      related_schema_id -> do_backfill_schema(map_of_schemas[related_schema_id], related_name, m, assoc)
     end
   end
 
-  defp maybe_handle_has_one(model_field, related_name, map_of_models, {_, model} = m, assoc) do
-    case Map.has_key?(model, model_field) do
+  defp maybe_handle_has_one(schema_field, related_name, map_of_schemas, {_, schema} = m, assoc) do
+    case Map.has_key?(schema, schema_field) do
       true -> m
-      false -> maybe_do_backfill_has_one(model_field, related_name, map_of_models, m, assoc)
+      false -> maybe_do_backfill_has_one(schema_field, related_name, map_of_schemas, m, assoc)
     end
   end
 
-  defp maybe_do_backfill_has_one(model_field, related_name, map_of_models, {id, _} = m, assoc) do
-    related_model = Enum.filter(map_of_models, fn({_, possibly_related_model}) ->
-      case Map.fetch!(possibly_related_model, model_field) do
+  defp maybe_do_backfill_has_one(schema_field, related_name, map_of_schemas, {id, _} = m, assoc) do
+    related_schema = Enum.filter(map_of_schemas, fn({_, possibly_related_schema}) ->
+      case Map.fetch!(possibly_related_schema, schema_field) do
         ^id -> true
         _ -> false
       end
     end)
 
-    case related_model do
+    case related_schema do
       [] -> m
-      [{_, related_model}] -> do_backfill_model(related_model, related_name, m, assoc)
+      [{_, related_schema}] -> do_backfill_schema(related_schema, related_name, m, assoc)
       _ -> raise("")
     end
   end
 
-  defp do_backfill_model(nil, _, {_, _} = m, _), do: m
+  defp do_backfill_schema(nil, _, {_, _} = m, _), do: m
 
-  defp do_backfill_model(related_model, related_name, {id, model}, assoc) do
-    [pkey] = related_model.__struct__.__schema__(:primary_key)
-    related_id = Map.fetch!(related_model, pkey)
+  defp do_backfill_schema(related_schema, related_name, {id, schema}, assoc) do
+    [pkey] = related_schema.__struct__.__schema__(:primary_key)
+    related_id = Map.fetch!(related_schema, pkey)
     new_assoc_field = %{field: related_name, ids: [related_id]}
-    backfilled_model = Map.put(model, assoc, new_assoc_field)
-    {id, backfilled_model}
+    backfilled_schema = Map.put(schema, assoc, new_assoc_field)
+    {id, backfilled_schema}
   end
 end

@@ -1,10 +1,10 @@
-defmodule MyApp.Models.City do
+defmodule MyApp.Schemas.City do
   @moduledoc false
   use Ecto.Schema
 
-  alias MyApp.Models.CityName
-  alias MyApp.Models.Mayor
-  alias MyApp.Models.Weather
+  alias MyApp.Schemas.CityName
+  alias MyApp.Schemas.Mayor
+  alias MyApp.Schemas.Weather
 
   schema "city" do
     belongs_to :city_name, CityName
@@ -12,17 +12,16 @@ defmodule MyApp.Models.City do
     has_one :mayor, Mayor
     has_many :friends, through: [:mayor, :friends]
     has_many :friend_names, through: [:friends, :friend_name]
-    many_to_many :sister_cities, __MODULE__, join_through: "cities_sister_cities", join_keys: [city_id: :id, sister_city_id: :id]
 
     timestamps
   end
 end
 
-defmodule MyApp.Models.CityName do
+defmodule MyApp.Schemas.CityName do
   @moduledoc false
   use Ecto.Schema
 
-  alias MyApp.Models.City
+  alias MyApp.Schemas.City
 
   schema "city_name" do
     field :name
@@ -32,12 +31,12 @@ defmodule MyApp.Models.CityName do
   end
 end
 
-defmodule MyApp.Models.Friend do
+defmodule MyApp.Schemas.Friend do
   @moduledoc false
 
   use Ecto.Schema
-  alias MyApp.Models.Mayor
-  alias MyApp.Models.FriendName
+  alias MyApp.Schemas.Mayor
+  alias MyApp.Schemas.FriendName
 
   schema "friend" do
     belongs_to :friend_name, FriendName
@@ -47,11 +46,11 @@ defmodule MyApp.Models.Friend do
   end
 end
 
-defmodule MyApp.Models.FriendName do
+defmodule MyApp.Schemas.FriendName do
   @moduledoc false
 
   use Ecto.Schema
-  alias MyApp.Models.Friend
+  alias MyApp.Schemas.Friend
 
   schema "friend_name" do
     field :name
@@ -59,12 +58,12 @@ defmodule MyApp.Models.FriendName do
   end
 end
 
-defmodule MyApp.Models.Mayor do
+defmodule MyApp.Schemas.Mayor do
   @moduledoc false
 
   use Ecto.Schema
-  alias MyApp.Models.City
-  alias MyApp.Models.Friend
+  alias MyApp.Schemas.City
+  alias MyApp.Schemas.Friend
 
   schema "mayor" do
     field :name
@@ -74,11 +73,11 @@ defmodule MyApp.Models.Mayor do
   end
 end
 
-defmodule MyApp.Models.Weather do
+defmodule MyApp.Schemas.Weather do
   @moduledoc false
   use Ecto.Schema
 
-  alias MyApp.Models.City
+  alias MyApp.Schemas.City
 
   schema "weather" do
     field :temp_lo, :integer

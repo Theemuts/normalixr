@@ -1,7 +1,7 @@
 defmodule Normalixr.Mixfile do
   use Mix.Project
 
-  @version "0.0.1"
+  @version "0.1.0"
 
   def project do
     [app: :normalixr,
@@ -30,7 +30,7 @@ defmodule Normalixr.Mixfile do
   end
 
   defp deps do
-    [{:ecto, "~> 2.0.0-beta"},
+    [{:ecto, "~> 1.1"},
      # Docs dependencies
      {:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.11", only: :dev}]
