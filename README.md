@@ -26,4 +26,5 @@ The package can be installed as:
 
 ## Documentation
 
-All documentation can be found on [Hexdocs](https://hexdocs.pm/normalixr).
+All documentation can be found on [Hexdocs](https://hexdocs.pm/normalixr/0.2.0).
+

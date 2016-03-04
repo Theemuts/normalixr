@@ -143,6 +143,27 @@ defmodule NormalixrTest do
     end
   end
 
+  test "normalizes many_to_many relations" do
+    city_schema2 = %City{id: 2}
+    city_schema1 = %City{id: 1, sister_cities: [city_schema2]}
+    result = Normalixr.normalize(city_schema1)
+    assert is_map(result)
+    assert result[:city]
+    assert result.city[1]
+    assert result.city[2]
+    assert result.city[1].sister_cities[:field] == :city
+    assert result.city[1].sister_cities[:ids] == [2]
+
+    field = result.city[1].sister_cities.field
+    ids = result.city[1].sister_cities.ids
+
+    assert result[field]
+
+    for id <- ids do
+      assert result[field][id]
+    end
+  end
+
   test "normalizes combinations of belongs_to, has_one, has_many, many_to_many, and has_through" do
     city_name_schema = %CityName{id: 1, name: "Amsterdam"}
 
@@ -156,7 +177,9 @@ defmodule NormalixrTest do
 
     mayor_schema = %Mayor{name: "The Mayor", id: 1, city_id: 1, friends: friends_schemas}
 
-    city_schema = %City{id: 2, city_name_id: 1, weather: weather_schemas, city_name: city_name_schema, mayor: mayor_schema, friends: friends_schemas}
+    sister_city_schemas = [%City{id: 1}, %City{id: 3}]
+
+    city_schema = %City{id: 2, city_name_id: 1, weather: weather_schemas, city_name: city_name_schema, mayor: mayor_schema, friends: friends_schemas, sister_cities: sister_city_schemas}
 
     result = Normalixr.normalize(city_schema)
     assert is_map(result)
@@ -170,7 +193,10 @@ defmodule NormalixrTest do
     assert result.city[2].mayor[:ids] == [1]
     assert result.city[2].friends[:field] == :friend
     assert result.city[2].friends[:ids] == [1, 2, 3]
-
+    assert result.city[1]
+    assert result.city[3]
+    assert result.city[2].sister_cities[:field] == :city
+    assert result.city[2].sister_cities[:ids] == [1, 3]
 
     field = result.city[2].city_name.field
     ids = result.city[2].city_name.ids
@@ -203,6 +229,51 @@ defmodule NormalixrTest do
     ids = result.city[2].friends.ids
 
     assert result[field]
+    for id <- ids do
+      assert result[field][id]
+    end
+
+    field = result.city[2].sister_cities.field
+    ids = result.city[2].sister_cities.ids
+
+    assert result[field]
+
+    for id <- ids do
+      assert result[field][id]
+    end
+  end
+
+  test "normalizes deeply-nested schemas" do
+    city_name_schema = %CityName{id: 1, name: "Amsterdam"}
+    sister_city_schemas = [%City{id: 1, city_name_id: 1, city_name: city_name_schema}]
+    city_schema = %City{id: 2, sister_cities: sister_city_schemas}
+    result = Normalixr.normalize(city_schema)
+    assert is_map(result)
+
+    assert result[:city]
+    assert result.city[1]
+    assert result.city[2]
+    assert result.city[2].sister_cities[:field] == :city
+    assert result.city[2].sister_cities[:ids] == [1]
+
+    field = result.city[2].sister_cities.field
+    ids = result.city[2].sister_cities.ids
+
+    assert result[field]
+
+    for id <- ids do
+      assert result[field][id]
+    end
+
+    assert result.city[1].city_name[:field] == :city_name
+    assert result.city[1].city_name[:ids] == [1]
+    assert result[:city_name]
+
+    field = result.city[1].city_name.field
+    ids = result.city[1].city_name.ids
+
+    assert result[field]
+
     for id <- ids do
       assert result[field][id]
     end
@@ -255,6 +326,30 @@ defmodule NormalixrTest do
     ids = result.city[2].friend_names.ids
 
     assert result[field]
+    for id <- ids do
+      assert result[field][id]
+    end
+  end
+
+  test "association ids are merged if the loaded association is different in two schemas" do
+    city_schema3 = %City{id: 3}
+    city_schema1a = %City{id: 1, sister_cities: [city_schema3]}
+    city_schema2 = %City{id: 2, sister_cities: [city_schema1a]}
+    city_schema1b = %City{id: 1, sister_cities: [city_schema2]}
+
+    result = Normalixr.normalize(city_schema1b)
+    assert is_map(result)
+    assert result[:city]
+    assert result.city[1]
+    assert result.city[2]
+    assert result.city[1].sister_cities[:field] == :city
+    assert result.city[1].sister_cities[:ids] == [3, 2]
+
+    field = result.city[1].sister_cities.field
+    ids = result.city[1].sister_cities.ids
+
+    assert result[field]
+
     for id <- ids do
       assert result[field][id]
     end

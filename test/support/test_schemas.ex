@@ -12,6 +12,7 @@ defmodule MyApp.Schemas.City do
     has_one :mayor, Mayor
     has_many :friends, through: [:mayor, :friends]
     has_many :friend_names, through: [:friends, :friend_name]
+    many_to_many :sister_cities, __MODULE__, join_through: "cities_sister_cities", join_keys: [city_id: :id, sister_city_id: :id]
 
     timestamps
   end

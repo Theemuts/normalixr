@@ -1,7 +1,7 @@
 defmodule Normalixr.Mixfile do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
 
   def project do
     [app: :normalixr,
@@ -25,12 +25,12 @@ defmodule Normalixr.Mixfile do
 
   defp package do
     [maintainers: ["Thomas van Doornmalen"],
-     licenses: ["Apache 2.0"],
+     licenses: ["MIT"],
      links: %{"GitHub" => "https://github.com/theemuts/normalixr"}]
   end
 
   defp deps do
-    [{:ecto, "~> 1.1"},
+    [{:ecto, "~> 2.0.0-beta"},
      # Docs dependencies
      {:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.11", only: :dev}]
