@@ -10,6 +10,7 @@ defmodule Normalixr do
   alias Ecto.Association.BelongsTo
   alias Ecto.Association.Has
 
+  @doc false
   def start(_, _) do
     import Supervisor.Spec, warn: false
 
