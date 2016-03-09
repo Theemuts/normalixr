@@ -119,7 +119,7 @@ defmodule Normalixr.PhoenixView do
           {id, view.render(template, [{field, model}, {:normalized_data, normalized_data}])}
         end
 
-        Normalixr.Util.filter_map_into(normalized_data[field], filter, mapper)
+        Normalixr.Util.filter_map_into(data, filter, mapper)
     end
   end
 end
