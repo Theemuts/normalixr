@@ -38,7 +38,7 @@ defmodule Normalixr.PhoenixView do
       iex> data = Normalixr.normalize(%MyApp.Schemas.City{id: 1})
       ...> assigns = [data: data, fields_to_render: [city: [view: MyApp.CityView]]]
       ...> Normalixr.PhoenixView.render("normalized.json", assigns)
-      %{city: %{1 => %{id: 1}}}
+      %{data: %{city: %{1 => %{id: 1}}}}
   
   You can also set the :except and :only fields in the options. Both these
   fields are anonymous functions which take two argument. The first is a tuple
@@ -56,6 +56,13 @@ defmodule Normalixr.PhoenixView do
   If the second option is set to true and the normalized representation 
   contains no models of that type, the field is not rendered. Otherwise, it is
   set to an empty map. By default, it is set to true.
+
+  If you don't want to put the rendered data into a field called data, you
+  must set the following configuration option:
+  config(:normalixr, :data_field, data_field)
+
+  If data_field is set to false, the data will not be put into another map.
+  Otherwise, data is replaced by whatever value is configured.
   """
 
   @spec render(String.t, map) :: map
@@ -81,7 +88,12 @@ defmodule Normalixr.PhoenixView do
       {field, filter_and_render(field, normalized_data, opts)}
     end
 
-    Normalixr.Util.filter_map_into(fields_to_render, filter, mapper)
+    data = Normalixr.Util.filter_map_into(fields_to_render, filter, mapper)
+
+    case Application.get_env(:normalixr, :data_field, :data) do
+      false -> data
+      field -> %{field => data}
+    end
   end
   
   defp extract_data_and_opts(assigns) when is_list assigns do
@@ -107,7 +119,7 @@ defmodule Normalixr.PhoenixView do
           {id, view.render(template, [{field, model}, {:normalized_data, normalized_data}])}
         end
 
-        Normalixr.Util.filter_map_into(normalized_data[field], filter, mapper)
+        Normalixr.Util.filter_map_into(data, filter, mapper)
     end
   end
 end
