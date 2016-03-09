@@ -94,8 +94,6 @@ defmodule Normalixr.PhoenixView do
       false -> data
       field -> %{field => data}
     end
-
-    %{data: Normalixr.Util.filter_map_into(fields_to_render, filter, mapper)}
   end
   
   defp extract_data_and_opts(assigns) when is_list assigns do
