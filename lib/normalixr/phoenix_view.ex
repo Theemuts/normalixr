@@ -38,7 +38,7 @@ defmodule Normalixr.PhoenixView do
       iex> data = Normalixr.normalize(%MyApp.Schemas.City{id: 1})
       ...> assigns = [data: data, fields_to_render: [city: [view: MyApp.CityView]]]
       ...> Normalixr.PhoenixView.render("normalized.json", assigns)
-      %{city: %{1 => %{id: 1}}}
+      %{data: %{city: %{1 => %{id: 1}}}}
   
   You can also set the :except and :only fields in the options. Both these
   fields are anonymous functions which take two argument. The first is a tuple
@@ -81,7 +81,7 @@ defmodule Normalixr.PhoenixView do
       {field, filter_and_render(field, normalized_data, opts)}
     end
 
-    Normalixr.Util.filter_map_into(fields_to_render, filter, mapper)
+    %{data: Normalixr.Util.filter_map_into(fields_to_render, filter, mapper)}
   end
   
   defp extract_data_and_opts(assigns) when is_list assigns do
