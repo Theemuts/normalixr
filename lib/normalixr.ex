@@ -34,8 +34,9 @@ defmodule Normalixr do
   The key of a schema is its primary key.
 
   ## Example
-      iex> Normalixr.normalize(%MyApp.Schemas.CityName{id: 1})
-      %{city_name: %{1 => %MyApp.Schemas.CityName{id: 1}}}
+
+    iex> Normalixr.normalize(%MyApp.Schemas.CityName{id: 1})
+    %{city_name: %{1 => %MyApp.Schemas.CityName{id: 1}}}
 
   The results no longer contain any nested schemas. Every loaded
   association is replaced by a map with two keys, :field and :ids.
@@ -43,9 +44,10 @@ defmodule Normalixr do
   referenced by the schema.
 
   ## Example
-        iex> Normalixr.normalize(%City{id: 4, city_name: %CityName{id: 1}})
-        %{city: %{4 => %City{id: 4, city_name: %{field: :city_name, ids: [1]}}},
-          city_name: %{1 => %CityName{id: 1}}}
+
+    iex> Normalixr.normalize(%City{id: 4, city_name: %CityName{id: 1}})
+    %{city: %{4 => %City{id: 4, city_name: %{field: :city_name, ids: [1]}}},
+      city_name: %{1 => %CityName{id: 1}}}
 
   As you can see the nesting has been lost.
 
@@ -80,11 +82,12 @@ defmodule Normalixr do
   @doc """
   Merge one or more normalized representations.
 
-    ## Parameters
-      - result_or_results: a normalized representation, or list of normalized
-      representations.
-      - initial_result: a normalized representation, optional when a list of
-      normalized representations is passed as the first argument.
+  ## Parameters
+
+    - result_or_results: a normalized representation, or list of normalized
+    representations.
+    - initial_result: a normalized representation, optional when a list of
+    normalized representations is passed as the first argument.
   """
 
   @spec merge([map]|map, map) :: map
@@ -103,17 +106,19 @@ defmodule Normalixr do
   loaded.
 
   ## Parameters
-      - result: a normalized representation.
-      - opts: a keyword list, the keys should be the name of the schemas you
-      want to backfill, the values the list of associations that should be
-      backfilled for those schemas.
+
+    - result: a normalized representation.
+    - opts: a keyword list, the keys should be the name of the schemas you
+    want to backfill, the values the list of associations that should be
+    backfilled for those schemas.
 
   ## Example
-        iex> [%MyApp.Schemas.City{id: 1}, %MyApp.Schemas.Mayor{id: 2, city_id: 1}]
-        ...> |> Normalixr.normalize
-        ...> |> Normalixr.backfill(city: [:mayor], mayor: [:city])
-        %{city: %{1 => %MyApp.Schemas.City{id: 1, mayor: %{field: :mayor, ids: [2]}}},
-          mayor: %{2 => %MyApp.Schemas.Mayor{id: 2, city_id: 1, city: %{field: :city, ids: [1]}}}}
+
+    iex> [%MyApp.Schemas.City{id: 1}, %MyApp.Schemas.Mayor{id: 2, city_id: 1}]
+    ...> |> Normalixr.normalize
+    ...> |> Normalixr.backfill(city: [:mayor], mayor: [:city])
+    %{city: %{1 => %MyApp.Schemas.City{id: 1, mayor: %{field: :mayor, ids: [2]}}},
+      mayor: %{2 => %MyApp.Schemas.Mayor{id: 2, city_id: 1, city: %{field: :city, ids: [1]}}}}
 
   As you can see, both the originally unloaded one-to-one relations have been backfilled.
   """
