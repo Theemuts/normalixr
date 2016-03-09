@@ -59,7 +59,7 @@ defmodule Normalixr.PhoenixView.Test do
     opts = [data: %{},
             fields_to_render: [city: [view: MyApp.CityView, dont_render_if_empty: false]]]
 
-    assert Normalixr.PhoenixView.render("normalized.json", opts) === %{data: %{city: %{}
+    assert Normalixr.PhoenixView.render("normalized.json", opts) === %{data: %{city: %{}}}
   end
 
   test "NoDataError is raised if raise_if_no_results is set to true and there is no data" do

@@ -4,9 +4,25 @@ defmodule Normalixr do
   normalized results, and backfilling has_on and belongs_to relations.
   """
 
+  use Application
+
   alias Ecto.Association.NotLoaded
   alias Ecto.Association.BelongsTo
   alias Ecto.Association.Has
+
+  def start(_, _) do
+    import Supervisor.Spec, warn: false
+
+    default_names = Application.get_env(:normalixr, :default_names, %{})
+
+    children = [
+      worker(Normalixr.NameAgent, [Normalixr.NameAgent, default_names])
+    ]
+
+    opts = [strategy: :one_for_one, name: Normalixr.Supervisor]
+
+    Supervisor.start_link(children, opts)
+  end
 
   @doc """
   Normalizes an ecto schema or list of ecto schema which might contain deeply
@@ -28,7 +44,14 @@ defmodule Normalixr do
   converted to a lower-case atom with underscores.
 
   For example, if your module is called MyApp.Schemas.CityName, the key
-  corresponding to these schemas in the normalized representation is :city_name.
+  corresponding to these schemas in the normalized representation is
+  :city_name.
+
+  You can override these default values by setting a map with default names in
+  your config. For example, if you want the module MyApp.Telephone.User to
+  be assigned to the field :telephone_user, you can set the :default_names
+  key in your configuration:
+  config :normalixr, :default_names, %{"MyApp.Telephone.User" => :telephone_user}
 
   The keys each point to a map which contains only the data of that type.
   The key of a schema is its primary key.
@@ -201,14 +224,8 @@ defmodule Normalixr do
   end
 
   defp module_to_name(module) do
-    pascal_case = module
-    |> Module.split
-    |> List.last
-
-    ~r/(?<!^)[A-Z](?=[a-z])/
-    |> Regex.replace(pascal_case, "_\\0")
-    |> String.downcase
-    |> String.to_atom
+    alias Normalixr.NameAgent
+    NameAgent.get(NameAgent, module)
   end
 
   defp handle_many(mod, normalized_schema, field, data, name, result) do
