@@ -1,6 +1,7 @@
 defmodule NormalixrTest do
   use ExUnit.Case
-  alias MyApp.Schemas.{CityName, Weather, City, Friend, FriendName, Mayor}
+  alias MyApp.Schemas.{CityName, Weather, City, Friend, FriendName, Mayor, Pseudonym, Contact}
+
   doctest Normalixr
 
   test "normalizes without relations" do
@@ -390,24 +391,38 @@ defmodule NormalixrTest do
     end
   end
 
-  test "has_one and belongs_to relationship can be backfilled if the data has been loaded" do
-    normalized = [%Mayor{name: "The Mayor", id: 2, city_id: 1}, %CityName{id: 1, name: "Here"}, %City{id: 1, city_name_id: 1}]
+  test "has_one, has_one through, and belongs_to relationships can be backfilled if the data has been loaded" do
+    backfilled = [%Mayor{name: "The Mayor", id: 2, city_id: 1, pseudo_id: 3},
+                  %Pseudonym{pseudonym: "Mr. Mayor", id: 1, another_id: 3},
+                  %CityName{id: 1, name: "Here"},
+                  %City{id: 1, city_name_id: 1}]
     |> Normalixr.normalize
+    |> Normalixr.backfill([mayor: [:pseudonym, :city], city: [:mayor, :mayor_pseudonym]])
 
-    assert Map.fetch(normalized.mayor[2].city, :ids) == :error
-    assert Map.fetch(normalized.city[1].mayor, :ids) == :error
+    assert Map.fetch!(backfilled.city[1].mayor, :ids) == [2]
+    assert Map.fetch!(backfilled.city[1].mayor_pseudonym, :ids) == [1]
+    assert %Ecto.Association.NotLoaded{} = backfilled.city[1].city_name
+    assert Map.fetch!(backfilled.mayor[2].city, :ids) == [1]
+  end
 
-    backfilled_city = normalized
-    |> Normalixr.backfill([mayor: [:city]])
+  test "raises if many_to_many / has_many / has_many through fields are backfilled" do
+    assert_raise Normalixr.UnspportedAssociation, fn ->
+      %City{id: 1, city_name_id: 1}
+      |> Normalixr.normalize
+      |> Normalixr.backfill([city: [:weather]])
+    end
 
-    assert Map.fetch!(backfilled_city.mayor[2].city, :ids) == [1]
-    assert Map.fetch(backfilled_city.city[1].mayor, :ids) == :error
+    assert_raise Normalixr.UnspportedAssociation, fn ->
+      %City{id: 1, city_name_id: 1}
+      |> Normalixr.normalize
+      |> Normalixr.backfill([city: [:sister_cities]])
+    end
 
-    backfilled_mayor = normalized
-    |> Normalixr.backfill([city: [:mayor]])
-
-    assert Map.fetch!(backfilled_mayor.city[1].mayor, :ids) == [2]
-    assert Map.fetch(backfilled_mayor.mayor[2].city, :ids) == :error
+    assert_raise Normalixr.UnspportedAssociation, fn ->
+      %City{id: 1, city_name_id: 1}
+      |> Normalixr.normalize
+      |> Normalixr.backfill([city: [:friends]])
+    end
   end
 
   test "raises when the association does not exist" do
@@ -416,5 +431,14 @@ defmodule NormalixrTest do
       |> Normalixr.normalize
       |> Normalixr.backfill([mayor: [:does_not_exist]])
     end
+  end
+
+  test "backfills self-related models" do
+    backfilled = [%Contact{id: 1, contact_id: 2, name: "a"}, %Contact{id: 2, contact_id: 1, name: "a"}]
+    |> Normalixr.normalize
+    |> Normalixr.backfill(contact: [:associated_contact])
+
+    assert backfilled.contact[1].associated_contact.ids == [2]
+    assert backfilled.contact[2].associated_contact.ids == [1]
   end
 end
