@@ -1,7 +1,7 @@
 defmodule Normalixr.Mixfile do
   use Mix.Project
 
-  @version "0.2.2"
+  @version "0.3.0"
 
   def project do
     [app: :normalixr,
@@ -17,8 +17,7 @@ defmodule Normalixr.Mixfile do
   end
 
   def application do
-    [mod: {Normalixr, []},
-     applications: [:logger, :ecto]]
+    [applications: [:logger, :ecto]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -31,7 +30,7 @@ defmodule Normalixr.Mixfile do
   end
 
   defp deps do
-    [{:ecto, "~> 2.0.0-beta"},
+    [{:ecto, "~> 2.0.0-beta.1"},
      # Docs dependencies
      {:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.11", only: :dev}]
