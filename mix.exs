@@ -30,7 +30,7 @@ defmodule Normalixr.Mixfile do
   end
 
   defp deps do
-    [{:ecto, ">= 2.0.0-beta and < 2.1.0"},
+    [{:ecto, ">= 2.0.0-beta"},
      # Docs dependencies
      {:earmark, "~> 0.2", only: :dev},
      {:ex_doc, "~> 0.11", only: :dev}]
