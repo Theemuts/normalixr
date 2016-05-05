@@ -27,7 +27,7 @@ The package can be installed as follows:
 ### Normalization
 
 The major function in this application is `Normalixr.normalize/2`. The first
-argument is an Ecto schema or a list thereof. The second argument is optional
+argument is an `Ecto` schema or a list thereof. The second argument is optional
 and can be ignored in most use cases, it is the result of a previous call to
 this function, and serves as an accumulator.
 
@@ -44,13 +44,17 @@ flat representation.
 
 In this flat representation, every schema is added to a field whose name is
 derived from the schema name. By default, it uses the underscored
-representation of the final block of the schema name. For example,
+version of the final block of the schema name. For example,
 schemas belonging to `MyApp.Weather` will be added to the field `:weather`,
 and `MyApp.CityName` to `:city_name`.
 
+(N.B. This means that `MyApp.API` will be converted to `:a_p_i`, so
+you can override the default behaviour by defining
+`def underscored_name, do: :api` in `MyApp.API`.)
+
 These fields are maps, and the key of a particular schema is equal to its
 primary key. For example, a schema with the primary key field equal to 1
-belonging to MyApp.Weather is normalized to:
+belonging to `MyApp.Weather` is normalized to:
 
   ```
   %{weather: %{1 => %MyApp.Weather{id: 1}}
@@ -70,7 +74,7 @@ is normalized to
   %{weather:
     %{1 => %MyApp.Weather{id: 1,
                           cities: %{field: :city,
-                                    id:    [1, 2]}}},
+                                    ids:   [1, 2]}}},
     %{city:
       %{1 => %MyApp.City{id: 1},
         2 => %MyApp.City{id: 2}}
@@ -97,8 +101,8 @@ which imports the `render`-functions from `Phoenix.Controller`), you can call:
   render(conn, Normalixr.PhoenixView, "normalized.json", assigns)
   ```
 
-This will render the `city.json`-template in `MyApp.CityView` and the
-`weather.json`-template in `MyApp.WeatherView`. These templates will receive
+This will render the `"city.json"`-template in `MyApp.CityView` and the
+`"weather.json"`-template in `MyApp.WeatherView`. These templates will receive
 a two-parameter map as data, specifically, it will always have the key
 `:normalized_data`, which points to the full normalized representation, the
 second points to the schema being rendered, and its key is its field name in
