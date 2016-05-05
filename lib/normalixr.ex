@@ -72,7 +72,10 @@ defmodule Normalixr do
   def normalize(schema_or_schemas, result \\ %{})
 
   def normalize(schemas, result) when is_list schemas and is_map result do
-    Enum.reduce(schemas, result, &(normalize/2))
+    schemas
+    |> Enum.map(&Task.async(fn -> normalize(&1, result) end))
+    |> Enum.map(&Task.await/1)
+    |> merge(result)
   end
 
   def normalize(schema, result) when is_map schema and is_map result do
