@@ -5,11 +5,13 @@ defmodule Normalixr.Association.HasThrough do
               cardinality: nil | :one | :many,
               field:       atom,
               through:     [] | [atom],
-              mods:         Keyword.t
+              mods:        Keyword.t,
+              mod:         atom
   }
 
   defstruct cardinality: nil,
             field:       nil,
             through:     [],
-            mods:        []
+            mods:        [],
+            mod:         nil
 end

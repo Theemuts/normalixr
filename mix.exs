@@ -17,11 +17,12 @@ defmodule Normalixr.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :ecto]]
+    [applications: [:logger, :ecto],
+     mod: {Normalixr.Application, []}]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_),     do: ["lib"]
+  defp elixirc_paths(_), do: ["lib", "test/support"]
+  #defp elixirc_paths(_),     do: ["lib"]
 
   defp package do
     [maintainers: ["Thomas van Doornmalen"],
@@ -31,6 +32,7 @@ defmodule Normalixr.Mixfile do
 
   defp deps do
     [{:ecto, ">= 2.0.0-rc"},
+     {:exactor, "~> 2.2.0"},
      # Docs dependencies
      {:earmark, "~> 0.2", only: :dev},
      {:ex_doc, "~> 0.11", only: :dev}]

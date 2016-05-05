@@ -4,8 +4,8 @@ defmodule Normalixr do
   normalized results, and backfilling has_on and belongs_to relations.
 
   In order to use this library, you need to replace any instance of
-  `use Ecto.Schema` with `use Normalixr.Schema`. This creates two new
-  functions, `underscored_name/0` and `normalixr_assocs/0`.
+  `use Ecto.Schema` with `use Normalixr.Schema, mod: __MODULE__`. This creates two
+  new functions, `underscored_name/0` and `normalixr_assocs/0`.
   """
 
   alias Ecto.Association.NotLoaded
@@ -79,7 +79,7 @@ defmodule Normalixr do
     mod = schema.__struct__
 
     {normalized_schema, new_result} = mod.normalixr_assocs        # List of assocs
-    |> Enum.reduce({schema, result}, &normalize_assoc/2)            # Normalize each assoc
+    |> Enum.reduce({schema, result}, &normalize_assoc/2)          # Normalize each assoc
 
     # Put the normalized schema into the new results
     [pkey] = mod.__schema__(:primary_key)
@@ -150,29 +150,18 @@ defmodule Normalixr do
 
   defp normalize_assoc(%NotLoaded{}, _, acc), do: acc
 
-  defp normalize_assoc(data, {assoc, _}, {normalized_schema, result}) when is_map data do
-    mod = data.__struct__
+  defp normalize_assoc(data, {assoc, %{mod: mod}}, {normalized_schema, result}) when is_map data do
     [pkey] = mod.__schema__(:primary_key)
     {%{normalized_schema | assoc => %{field: mod.underscored_name, ids: [Map.fetch!(data, pkey)]}}, normalize(data, result)}
   end
 
-  defp normalize_assoc(nil, {_, assoc_info}, {normalized_schema, result}) do
-    field = assoc_info.mod.underscored_name
-    {%{normalized_schema | field => %{field: field, ids: []}}, result}
-  end
-
-  defp normalize_assoc([], {assoc, %HasThrough{} = assoc_info}, {normalized_schema, result}) do
-    mod = assoc_info.mods |> List.last |> elem(1) |> elem(0)
+  defp normalize_assoc(data, {assoc, %{mod: mod}}, {normalized_schema, result})
+      when is_nil(data)
+      when data == [] do
     {%{normalized_schema | assoc => %{field: mod.underscored_name, ids: []}}, result}
   end
 
-  defp normalize_assoc([], {assoc, assoc_info}, {normalized_schema, result}) do
-    mod = assoc_info.mod
-    {%{normalized_schema | assoc => %{field: mod.underscored_name, ids: []}}, result}
-  end
-
-  defp normalize_assoc([datum | _] = data, {assoc, _}, {normalized_schema, result}) do
-    mod = datum.__struct__
+  defp normalize_assoc(data, {assoc, %{mod: mod}}, {normalized_schema, result}) when is_list(data) do
     [pkey] = mod.__schema__(:primary_key)
     ids = Enum.map(data, &(Map.fetch!(&1, pkey)))
 
@@ -180,13 +169,11 @@ defmodule Normalixr do
   end
 
   defp update_result({name, data}, result) do
-    case result[name] do
-      nil ->
-        Map.put(result, name, data)
-      val ->
-        Map.put(result, name, deep_merge(val, data))
-    end
+    data = deep_merge(result[name], data)
+    Map.put(result, name, data)
   end
+
+  defp deep_merge(nil, data), do: data
 
   defp deep_merge(old_data, new_data) do
     Enum.reduce(new_data, old_data, fn({id, schema}, updated_data) ->
@@ -201,7 +188,8 @@ defmodule Normalixr do
   end
 
   defp do_deep_merge(old_schema, schema) do
-    merge_assocs(old_schema, schema)
+    old_schema
+    |> merge_assocs(schema)
     |> merge_fields(schema)
   end
 

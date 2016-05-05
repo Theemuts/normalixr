@@ -12,6 +12,16 @@ defmodule Normalixr.ModuleInfo do
   alias Ecto.Association.ManyToMany
 
   def extract_assocs(mod) do
+    case Normalixr.ETS.get(mod) do
+      {:ok, info} -> info
+      :error ->
+        info = do_extract(mod)
+        Normalixr.ETS.add(mod, info)
+        info
+    end
+  end
+
+  defp do_extract(mod) do
     mod.__schema__(:associations)
     |> Enum.map(&(parse_assoc(mod, &1)))
     |> Enum.into(%{})
@@ -45,10 +55,14 @@ defmodule Normalixr.ModuleInfo do
   end
 
   defp parse_assoc(%HasThrough{field: f, cardinality: c, through: t}, mod) do
+    [mod | _] = mods = extract_modules(mod, t)
+    mod = mod |> elem(1) |> elem(0)
     %HT{field: f,
         cardinality: c,
         through: t,
-        mods: extract_modules(mod, t) |> Enum.reverse}
+        mods: Enum.reverse(mods),
+        mod: mod
+}
   end
 
   defp extract_modules(mod, t, acc \\ [])
