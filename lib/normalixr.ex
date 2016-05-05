@@ -1,11 +1,11 @@
 defmodule Normalixr do
   @moduledoc """
   This module offers basic support to normalize nested Ecto schemas, merging
-  normalized results, and backfilling has_on and belongs_to relations.
+  normalized results, and backfilling has_one and belongs_to-relations.
 
-  In order to use this library, you need to replace any instance of
-  `use Ecto.Schema` with `use Normalixr.Schema, mod: __MODULE__`. This creates two
-  new functions, `underscored_name/0` and `normalixr_assocs/0`.
+  In order to use this library, you need to add `:normalixr` to your list of
+  running applications, and replace any instance of `use Ecto.Schema` with
+  `use Normalixr.Schema`.
   """
 
   alias Ecto.Association.NotLoaded
@@ -14,13 +14,13 @@ defmodule Normalixr do
   alias Normalixr.Association.HasThrough
 
   @doc """
-  Normalizes an ecto schema or list of ecto schema which might contain deeply
+  Normalizes an Ecto schema or list of Ecto schemas which might contain deeply
   nested data.
 
   ## Parameters
 
-    - schema_or_schemas: An ecto schema or a list of ecto schemas
-    - initial_result: The result of an earlier normalization. Defaults to an
+    - `schema_or_schemas`: An ecto schema or a list of ecto schemas
+    - `initial_result`: The result of an earlier normalization. Defaults to an
     empty map.
 
   This function returns a single map, which is a normalized representation of
@@ -32,9 +32,9 @@ defmodule Normalixr do
   All but the last dot-separated block is ignored, this last block is
   converted to a lower-case atom with underscores.
 
-  For example, if your module is called MyApp.Schemas.CityName, the key
+  For example, if your module is called `MyApp.Schemas.CityName`, the key
   corresponding to these schemas in the normalized representation is
-  :city_name.
+  `:city_name`.
 
   You can override these default values by overriding `underscored_name/0`
   with a function which returns the name as an atom. For example, if you
@@ -50,7 +50,7 @@ defmodule Normalixr do
       %{city_name: %{1 => %MyApp.Schemas.CityName{id: 1}}}
 
   The results no longer contain any nested schemas. Every loaded
-  association is replaced by a map with two keys, :field and :ids.
+  association is replaced by a map with two keys, `:field` and `:ids`.
   The former has the key for those schemas, the latter contains a list of ids
   referenced by the schema.
 
@@ -63,9 +63,9 @@ defmodule Normalixr do
   As you can see the nesting has been lost.
 
   If a schema is inserted into the normalized representation which has
-  already been set, a Normalixr.FieldMismatchError is raised if the field
-  is set in both schemas and they don't match. If either value is nil,
-  it is replaced if the other value is not nil.
+  already been set, a `Normalixr.FieldMismatchError` is raised if the field
+  is set in both schemas and they don't match. If either value is `nil`,
+  it is replaced if the other value is not `nil`.
   """
 
   @spec normalize(Ecto.Schema.t | [Ecto.Schema.t], map) :: map
@@ -81,8 +81,8 @@ defmodule Normalixr do
   def normalize(schema, result) when is_map schema and is_map result do
     mod = schema.__struct__
 
-    {normalized_schema, new_result} = mod.normalixr_assocs        # List of assocs
-    |> Enum.reduce({schema, result}, &normalize_assoc/2)          # Normalize each assoc
+    {normalized_schema, new_result} = Normalixr.ModuleInfo.extract_assocs(mod) # List of assocs
+    |> Enum.reduce({schema, result}, &normalize_assoc/2)                       # Normalize each assoc
 
     # Put the normalized schema into the new results
     [pkey] = mod.__schema__(:primary_key)
@@ -97,9 +97,9 @@ defmodule Normalixr do
 
   ## Parameters
 
-    - result_or_results: a normalized representation, or list of normalized
+    - `result_or_results`: a normalized representation, or list of normalized
     representations.
-    - initial_result: a normalized representation, optional when a list of
+    - `initial_result`: a normalized representation, optional when a list of
     normalized representations is passed as the first argument.
   """
 
@@ -120,8 +120,8 @@ defmodule Normalixr do
 
   ## Parameters
 
-    - result: a normalized representation.
-    - opts: a keyword list, the keys should be the name of the schemas you
+    - `result`: a normalized representation.
+    - `opts`: a keyword list, the keys should be the name of the schemas you
     want to backfill, the values the list of associations that should be
     backfilled for those schemas.
 
@@ -135,7 +135,7 @@ defmodule Normalixr do
 
   As you can see, both the originally unloaded one-to-one relations have been backfilled.
 
-  If you try to backfill unsupported associations, a Normalixr.UnsupportedAssociation
+  If you try to backfill unsupported associations, a `Normalixr.UnsupportedAssociation`
   error is raised.
   """
 
@@ -256,7 +256,9 @@ defmodule Normalixr do
   end
 
   defp handle_schema({_, schema} = m, assoc, result) do
-    handle_schema(schema.__struct__.normalixr_assocs[assoc], m, assoc, result)
+    mod = schema.__struct__
+    info = Normalixr.ModuleInfo.extract_assocs(mod)
+    handle_schema(info[assoc], m, assoc, result)
   end
 
   defp handle_schema(nil, {_, schema}, assoc, _) do

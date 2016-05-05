@@ -83,7 +83,7 @@ the relationship, the ids-field will contain a single-element list.
 ### Rendering
 
 In order to facilitate integration with Phoenix, Normalixr offers the
-`Normalixr.PhoenixView` module. In a Phoenix controller (or any other module
+`Normalixr.PhoenixView`-module. In a Phoenix controller (or any other module
 which imports the `render`-functions from `Phoenix.Controller`), you can call:
 
   ```
@@ -97,7 +97,13 @@ which imports the `render`-functions from `Phoenix.Controller`), you can call:
   render(conn, Normalixr.PhoenixView, "normalized.json", assigns)
   ```
 
-   assigns = [data: data, fields_to_render: [city: [view: MyApp.CityView]]]
-   Normalixr.PhoenixView.render("normalized.json", assigns)
+This will render the `city.json`-template in `MyApp.CityView` and the
+`weather.json`-template in `MyApp.WeatherView`. These templates will receive
+a two-parameter map as data, specifically, it will always have the key
+`:normalized_data`, which points to the full normalized representation, the
+second points to the schema being rendered, and its key is its field name in
+the normalized representation. For example, if you render `MyApp.Weather`,
+the render function will receive
+`%{weather: normalized_schema, normalized_data: normalized_data}` as data.
 
-All documentation can be found on [Hexdocs](https://hexdocs.pm/normalixr).
+More documentation can be found on [Hexdocs](https://hexdocs.pm/normalixr).

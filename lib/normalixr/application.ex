@@ -2,6 +2,7 @@ defmodule Normalixr.Application do
   @moduledoc false
   use Application
 
+  @doc false
   def start(_, _) do
     import Supervisor.Spec
 

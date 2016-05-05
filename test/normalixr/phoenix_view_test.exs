@@ -4,7 +4,7 @@ defmodule Normalixr.PhoenixView.Test do
 
   doctest Normalixr.PhoenixView
 
-  test "calls default render function in passed view module" do
+  test "calls default render function in passed view-module" do
     city_schema = %City{id: 2}
     normalized = Normalixr.normalize(city_schema)
 
